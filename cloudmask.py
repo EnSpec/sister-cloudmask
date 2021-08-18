@@ -103,17 +103,16 @@ def main():
                                     structure= np.ones((args.dilation,
                                                         args.dilation)) ==1)
     cloud_mask[labels_dilate] = 3
-    cloud_mask = (cloud_mask==3).astype(int)
     cloud_mask[~radiance.mask['no_data']] = -9999
 
     # Export cloud radiance
     mask_header = radiance.get_header()
     mask_header['bands']= 1
-    mask_header['band names']= ['cloud_mask']
+    mask_header['band names']= ['cover_class']
     mask_header['wavelength']= []
     mask_header['fwhm']= []
     mask_header['data type']= 2
-    out_file = out_dir + radiance.base_name + '_cld'
+    out_file = out_dir + radiance.base_name + '_cls'
     writer = WriteENVI(out_file,mask_header)
     writer.write_band(cloud_mask,0)
 
