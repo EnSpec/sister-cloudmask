@@ -6,7 +6,7 @@ The classifier is a two-step process:
 1. A 1D CNN is used to perform and initial pixel-wise classifiction
 2. A set of median and dilation filters are used to filter out stray pixels and buffer around clouds.
 
-The models were trained using PRISMA (VNIR and VSWIR models) DESIS (VNIR model) spaceborne radiance data.
+The models were trained using PRISMA (VNIR and VSWIR models) and DESIS (VNIR model) spaceborne radiance data.
 
 ## Installation
 
