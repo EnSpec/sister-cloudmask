@@ -44,8 +44,10 @@ def main():
     '''
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('in_file', type=str)
-    parser.add_argument('out_dir', type=str)
+    parser.add_argument('rdn_file', type=str,
+                        help='Input radiance image')
+    parser.add_argument('out_dir', type=str,
+                         help='Output directory')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--median', type=int, default = 7)
     parser.add_argument('--dilation', type=int, default = 7)
@@ -54,7 +56,7 @@ def main():
     args = parser.parse_args()
 
     radiance = ht.HyTools()
-    radiance.read_file(args.in_file, 'envi')
+    radiance.read_file(args.rdn_file, 'envi')
     radiance.load_data()
 
     model_dir = os.path.dirname(os.path.realpath(__file__)) + '/models/'
