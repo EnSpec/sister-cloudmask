@@ -21,17 +21,6 @@ of thresholds on individual bands, indices and band ratios. Thresholds were adju
 cloud detection accuracy in PRISMA imagery.
 
 
-| Variable| HyCMA Threshold | PRISMA Threshold |
-| ----------- | ----------- |----------- |
-| 650nm  | 20 | 15.8 |
-| NDSI  | 0.65 | 0.43|
-| 800nm/650nm  | 4 | 4.4 |
-| 800nm/550nm   | 2 | 1.4 |
-| 800nm/1650nm   | 1.5 | 2.3 |
-
-
-
-
 HyspIRI Cloud Mask Detection Algorithm Theoretical Basis Document
 Hulley, Glynn C.; Hook, Simon J.
 [http://hdl.handle.net/2014/42573](http://hdl.handle.net/2014/42573)
