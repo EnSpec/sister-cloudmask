@@ -27,7 +27,7 @@ cloud detection accuracy in PRISMA imagery.
 | NDSI  | 0.65 | 0.43|
 | 800nm/650nm  | 4 | 4.4 |
 | 800nm/550nm   | 2 | 1.4 |
-| $\frac{\frac{800nm}{1650nm}}$	  | 1.5 | 2.3 |
+| 800nm/1650nm   | 1.5 | 2.3 |
 
 
 
