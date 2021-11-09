@@ -14,7 +14,7 @@ The models were trained using PRISMA (VNIR and VSWIR models) and DESIS (VNIR mod
 
 ## HyCMA classifier
 
-![](./examples/prisma_example1.png)
+![](./examples/prisma_hycma.png)
 
 This classifier is based on the HyspIRI Cloud Mask Detection Algorithm (HyCMA) and uses a series
 of thresholds on individual bands, indices and band ratios. Thresholds were adjusted to maximize
