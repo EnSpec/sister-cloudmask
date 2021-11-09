@@ -24,10 +24,10 @@ cloud detection accuracy in PRISMA imagery.
 | Variable| HyCMA Threshold | PRISMA Threshold |
 | ----------- | ----------- |----------- |
 | 650nm  | 20 | 15.8 |
-| NDSI  | .65 | 0.43|
+| NDSI  | 0.65 | 0.43|
 | 800nm/650nm  | 4 | 4.4 |
 | 800nm/550nm   | 2 | 1.4 |
-| 800nm/1650nm   | 1.5 | 2.3 |
+| $\frac{\frac{800nm}{1650nm}}$	  | 1.5 | 2.3 |
 
 
 
