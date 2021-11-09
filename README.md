@@ -19,7 +19,7 @@ pip -r requirements.txt
 ## Use
 
 ```bash
-python cloudmask.py radiance_image output_directory
+python cnn_cloudmask.py radiance_image output_directory
 ```
 
 Optional arguments:
