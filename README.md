@@ -1,8 +1,10 @@
 # sister-cloudmask
-This is a simple classification algorithm for generating a 4 class mask (land, water, snow/ice and cloud) from
-radiance data.
+This repository contains a series of algorithms for cloud masking of hyperspectral imagery.
 
-![](./examples/prisma_example1.png)
+
+## CNN classifier
+
+![](./examples/prisma_cnn.png)
 
 The classifier is a two-step process:
 1. A 1D CNN is used to perform and initial pixel-wise classifiction
@@ -10,21 +12,15 @@ The classifier is a two-step process:
 
 The models were trained using PRISMA (VNIR and VSWIR models) and DESIS (VNIR model) spaceborne radiance data.
 
-## Installation
+## HyCMA classifier
 
-```bash
-pip -r requirements.txt
-```
+![](./examples/prisma_example1.png)
 
-## Use
+This classifier is based on the HyspIRI Cloud Mask Detection Algorithm (HyCMA) and uses a series
+of thresholds on individual bands, indices and band ratios. Thresholds were adjusted to maximize
+cloud detection accuracy in PRISMA imagery.
 
-```bash
-python cnn_cloudmask.py radiance_image output_directory
-```
 
-Optional arguments:
-
-- `--verbose`: default = False
-- `--median`: Size of median filter, default = 7
-- `--dilation`: Size of dilation filter, default = 7
-- `--apply`: Create a copy of the input radiance image and set cloud pixels to 'no data' value, default = False
+HyspIRI Cloud Mask Detection Algorithm Theoretical Basis Document
+Hulley, Glynn C.; Hook, Simon J.
+[http://hdl.handle.net/2014/42573](http://hdl.handle.net/2014/42573)
