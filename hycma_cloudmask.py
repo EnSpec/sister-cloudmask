@@ -134,11 +134,11 @@ def main():
             progbar(iterator.current_line,radiance.lines, full_progbar = 100)
     print('\n')
 
-    y_grid, x_grid = np.ogrid[-args.dilate: args.dilate + 1, -args.dilate: args.dilate + 1]
-    window =  (x_grid**2 + y_grid**2 <= args.dilate**2)
+    y_grid, x_grid = np.ogrid[-args.dilation: args.dilation + 1, -args.dilation: args.dilation + 1]
+    window =  (x_grid**2 + y_grid**2 <= args.dilation**2)
 
     clouds =binary_dilation(cloud_mask==5,
-                                structure= window).astype(int)
+                                structure= window)
     clouds[~radiance.mask['no_data']] = -9999
 
     # Export cloud radiance
@@ -147,10 +147,12 @@ def main():
     mask_header['band names']= ['cloud']
     mask_header['wavelength']= []
     mask_header['fwhm']= []
-    mask_header['data type']= 2
+    mask_header['data type']= 4
+    mask_header['default bands']= []
+
     out_file = out_dir + radiance.base_name + '_cloud'
     writer = WriteENVI(out_file,mask_header)
-    writer.write_band(cloud_mask,0)
+    writer.write_band(clouds,0)
 
     if args.apply:
         # Export masked radiance
