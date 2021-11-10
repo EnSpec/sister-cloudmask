@@ -20,7 +20,17 @@ This classifier is based on the HyspIRI Cloud Mask Detection Algorithm (HyCMA) a
 of thresholds on individual bands, indices and band ratios. Thresholds were adjusted to maximize
 cloud detection accuracy in PRISMA imagery.
 
+[HyspIRI Cloud Mask Detection Algorithm Theoretical Basis Document](http://hdl.handle.net/2014/42573)
+Hulley, Glynn C.; Hook, Simon J
 
-HyspIRI Cloud Mask Detection Algorithm Theoretical Basis Document
-Hulley, Glynn C.; Hook, Simon J.
-[http://hdl.handle.net/2014/42573](http://hdl.handle.net/2014/42573)
+## Sentinel classifier
+
+![](./examples/prisma_sen2corr.png)
+
+This classifier is based on the Sentinel-2 MSI – Level 2A Products Algorithm Theoretical Basis Document and uses a series
+of thresholds on individual bands, indices and band ratios.
+
+*Implementation of this is ongoing and not all steps are currently implemented.*
+
+[Sentinel-2 MSI – Level 2A Products Algorithm Theoretical Basis Document](https://earth.esa.int/c/document_library/get_file?folderId=349490&name=DLFE-4518.pdf)
+R. Richter ; J. Louis, B. Berthelot
