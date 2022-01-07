@@ -22,6 +22,10 @@ from scipy.interpolate import interp1d
 from scipy.ndimage import binary_dilation,median_filter
 from skimage.util import view_as_blocks
 from tensorflow import keras
+import pandas as pd
+from scipy.signal import savgol_filter
+from scipy.ndimage import gaussian_filter1d
+import datetime as dt
 
 def progbar(curr, total, full_progbar = 100):
     '''Display progress bar.
@@ -46,90 +50,108 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('rdn_file', type=str,
                         help='Input radiance image')
+    parser.add_argument('obs_file', type=str,
+                        help='Input observables image')
     parser.add_argument('out_dir', type=str,
                          help='Output directory')
     parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--median', type=int, default = 7)
-    parser.add_argument('--dilation', type=int, default = 7)
-    parser.add_argument('--apply', action='store_true')
+    parser.add_argument('--median', type=int, default = 3)
+    parser.add_argument('--dilation', type=int, default = 9)
+    parser.add_argument('--cld_prb', type=float, default = .3)
+    parser.add_argument('--cls', action='store_true')
 
     args = parser.parse_args()
 
-    radiance = ht.HyTools()
-    radiance.read_file(args.rdn_file, 'envi')
-    radiance.load_data()
+    rdn = ht.HyTools()
+    rdn.read_file(args.rdn_file, 'envi')
+    rdn.load_data()
+
+    obs = ht.HyTools()
+    obs.read_file(args.obs_file, 'envi')
+    obs.load_data()
 
     model_dir = os.path.dirname(os.path.realpath(__file__)) + '/models/'
+    data_dir = os.path.dirname(os.path.realpath(__file__)) + '/data/'
+
     out_dir = args.out_dir+'/' if not args.out_dir.endswith('/') else args.out_dir
 
-    if (radiance.wavelengths.max() >= 990) and (radiance.wavelengths.max() < 2440):
-        waves = np.arange(420,981,10)
-        model_path  = '%s/cloud_rad_vnir.h5' % model_dir
-    elif radiance.wavelengths.max() > 2440:
-        waves = np.arange(420,2451,10)
-        model_path  = '%s/cloud_rad_vswir.h5' % model_dir
+    esd = pd.read_csv('%s/earth_sun_distance.csv' % data_dir,index_col=0,header = None)
+    solar = pd.read_csv('%s/kurudz_0.1nm.csv' % data_dir,index_col=0,header = None)
+
+    if rdn.base_name.startswith('PRS'):
+        model_path  = '%s/prisma_cnn_v1.h5' % model_dir
+        model = keras.models.load_model(model_path)
+        waves = np.arange(420,2441,10)
     else:
-        print("Image wavelength range outside of model ranges.")
+        print("Unrecognized sensor.")
         return
 
-    #Calculate wavelengths aggregation bins
-    bins = int(np.round(10/np.diff(radiance.wavelengths).mean()))
-    agg_waves  = np.nanmean(view_as_blocks(radiance.wavelengths[:(radiance.bands//bins) * bins],
-                                            (bins,)),axis=1)
-    model = keras.models.load_model(model_path)
+    #Generate solar irradiance spectrum
+    cos_sol_zen =np.cos(np.radians(obs.get_band(4)))
+    sun_irad = []
 
-    cloud_mask = np.full((radiance.lines,radiance.columns),-1.0)
-    iterator =radiance.iterate(by = 'chunk',chunk_size = (200,200))
-    i = 0
+    if len(sun_irad) == 0:
+        for i,wave in enumerate(rdn.wavelengths):
+            sigma = (rdn.fwhm[i]*10)/(2* np.sqrt(2*np.log(2)))
+            sol = gaussian_filter1d(solar,sigma).flatten()
+            sun_irad.append(sol[np.argwhere(round(wave,1) ==solar.index)[0][0]])
+    sun_irad = np.array(sun_irad)
+
+    doy = dt.datetime.strptime(rdn.base_name[4:12],
+                               '%Y%m%d').timetuple().tm_yday
+
+    iterator = rdn.iterate(by = 'chunk')
+    classes = np.zeros((rdn.lines,rdn.columns,4))
+
+    pixels = 0
     while not iterator.complete:
+        chunk = np.copy(iterator.read_next())
+        pixels+=chunk.shape[0]*chunk.shape[1]
+        chunk[chunk <=0] = .00001
 
-        chunk = iterator.read_next()
-        chunk =view_as_blocks(chunk[:,:,:(radiance.bands//bins) * bins],
-                              (1,1,bins)).mean(axis=(-3,-2,-1))
-        data =chunk.reshape(chunk.shape[0]*chunk.shape[1],chunk.shape[2])
-        interper = interp1d(agg_waves,data,kind='cubic')
-        data = interper(waves)
-        chunk_prd = model.predict(data[:,:,np.newaxis])
-        pred =np.argmax(chunk_prd,axis=1).reshape(chunk.shape[:2])
-        cloud_mask[iterator.current_line:iterator.current_line+chunk.shape[0],
-              iterator.current_column:iterator.current_column+chunk.shape[1]] = pred
-        i+=pred.shape[0]*pred.shape[1]
-        if args.verbose:
-            progbar(i,radiance.lines*radiance.columns, full_progbar = 100)
-    print('\n')
+        #Calculate ToA reflectance and interpolate to 10nm
+        toa_chunk = np.pi*chunk*(esd.loc[doy].values[0]**2)
+        cos_chunk = cos_sol_zen[iterator.current_line:iterator.current_line+chunk.shape[0],
+                                 iterator.current_column:iterator.current_column+chunk.shape[1]]
+        toa_chunk /= cos_chunk[:,:,np.newaxis]* sun_irad[np.newaxis,np.newaxis,:]
 
-    # Apply spatial filters to classification map
-    cloud_mask =median_filter(cloud_mask,args.median)
-    labels = cloud_mask==3
-    labels_dilate = binary_dilation(labels,
-                                    structure= np.ones((args.dilation,
-                                                        args.dilation)) ==1)
-    cloud_mask[labels_dilate] = 3
-    cloud_mask[~radiance.mask['no_data']] = -9999
+        interper = interp1d(rdn.wavelengths,toa_chunk,
+                            kind='linear',fill_value = 'extrapolate')
+        #Interpolate data
+        toa_chunk = interper(waves).astype(float)
+        toa_chunk = toa_chunk.reshape((toa_chunk.shape[0]*toa_chunk.shape[1],
+                                       toa_chunk.shape[2]))
+        #Smooth data
+        toa_chunk = savgol_filter(toa_chunk,7,2)
+        pred= model.predict(toa_chunk[:,:,np.newaxis])
+        pred = pred.reshape((chunk.shape[0],chunk.shape[1],4))
+        classes[iterator.current_line:iterator.current_line+pred.shape[0],
+                iterator.current_column:iterator.current_column+pred.shape[1],:] = pred
 
-    # Export cloud radiance
-    mask_header = radiance.get_header()
+
+    clouds = classes[:,:,3]>args.cld_prb
+    cloud_mask =median_filter(clouds.astype(bool),args.median)
+    cloud_dilate = binary_dilation(cloud_mask,
+                                    structure= np.ones((args.dilation,args.dilation)))
+    # Export cloud mask
+    mask_header = rdn.get_header()
     mask_header['bands']= 1
-    mask_header['band names']= ['cover_class']
+    mask_header['band names']= ['cloud']
     mask_header['wavelength']= []
     mask_header['fwhm']= []
-    mask_header['data type']= 2
-    out_file = out_dir + radiance.base_name + '_cls'
+
+    out_file = rdn.file_name.replace('_rdn','_cld')
     writer = WriteENVI(out_file,mask_header)
-    writer.write_band(cloud_mask,0)
+    writer.write_band(cloud_dilate,0)
 
-    if args.apply:
-        # Export masked radiance
-        out_header = radiance.get_header()
-        out_file = out_dir + radiance.base_name + '_msk'
-        writer = WriteENVI(out_file,out_header)
-
-        mask = cloud_mask == 1
-
-        for band_num in range(radiance.bands):
-            band = np.copy(radiance.get_band(band_num))
-            band[mask] = radiance.no_data
-            writer.write_band(band,band_num)
+    #Export class probabilites
+    if args.cls:
+        mask_header['bands']= 4
+        mask_header['band names']= ['land','water','snow_ice','cloud']
+        out_file = rdn.file_name.replace('_rdn','_cls')
+        writer = WriteENVI(out_file,mask_header)
+        for band in range(4):
+            writer.write_band(classes[:,:,band],band)
 
 if __name__ == "__main__":
     main()
